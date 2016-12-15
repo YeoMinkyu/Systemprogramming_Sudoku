@@ -77,7 +77,7 @@ static int is_valid_stream(char *s)
    // stream의 길이가 스도쿠의 길이(81)랑 일치 하는지 
    if (n != SUDOKU_LENGTH )
    {
-      printf("stream is too short.\n");
+      printf("Stream has to be %d characters long.\n", SUDOKU_LENGTH);
       return FALSE;
    }
 
@@ -196,7 +196,7 @@ static void init_windows(void)
     //timer 창
     levelbox = newwin(LEVEL_LINES, LEVEL_COLS, LEVEL_X, LEVEL_Y);
    showWindow();
-
+   
 }
 
 
@@ -249,6 +249,10 @@ static void new_puzzle(void)
 
    g_playing = TRUE;
 }
+
+// 힌트 함수 
+
+
 static int hint()
 {
    char tmp_board[STREAM_LENGTH];
@@ -376,7 +380,36 @@ int main(int argc, char *argv[])
             run = FALSE;
             break;
 
-          case 'S':
+         case 'A': // 문제 풀기 
+            if(g_playing)
+            {
+               werase(status);
+               mvwprintw(status, 0, 0, "Solving puzzle...");
+               refresh();
+               wrefresh(status);
+               solve(plain_board);
+               fill_grid(plain_board);
+               werase(status);
+               mvwprintw(status, 0, 0, "You gave up...sorry about that :(");
+               g_playing = FALSE;
+            }
+            break;
+
+
+       case 'P': // 치트키 
+            if(g_playing)
+            {
+               werase(status);
+               mvwprintw(status, 0, 0, "Solving puzzle...");
+               refresh();
+               wrefresh(status);
+               solve(plain_board);
+               fill_grid(plain_board);
+               werase(status);
+               strcpy(user_board,plain_board);
+            }
+            break;
+         case 'S':
          case 'N': // 새 퍼즐 생성
          /* showWindow();*/
           hint_try= 0;
@@ -465,6 +498,19 @@ int main(int argc, char *argv[])
                }
                break;
             }
+
+         case 'H':
+            if (g_playing && hint())
+            {
+               fill_grid(user_board);
+               werase(status);
+               mvwprintw(status, 0, 0, "One blank was filled!");
+            }
+         showWindow();
+            break;
+         default:
+            break;
+      }
       /*if user inputs a number*/
       // 숫자 화면에 채우기
      
