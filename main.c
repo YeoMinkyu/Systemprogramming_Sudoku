@@ -68,7 +68,7 @@ static int is_valid_stream(char *s)
       //문자가 1에서 9 사이 또는 . 인지 검사 
       if(!((*p >= 49 && *p <= 57) || *p == '.' ))
       {
-         printf("%d error.\n", n);
+         printf("Character %c at position %d is not allowed.\n", *p, n);
          return FALSE;
       }
       p++; // 다음 문자
@@ -84,7 +84,7 @@ static int is_valid_stream(char *s)
    // 스도쿠 퍼즐 검사
    if (!is_valid_puzzle(s))
    {
-      printf("It is not available.\n");
+      printf("Stream does not represent a valid sudoku puzzle.\n");
       return FALSE;
    }
    // 위의 에러에 모두 해당하지 않으면, 이 stream은 valid 함
@@ -249,7 +249,37 @@ static void new_puzzle(void)
 
    g_playing = TRUE;
 }
+static int hint()
+{
+   char tmp_board[STREAM_LENGTH];
+   int i, j, solved;
 
+   strcpy(tmp_board, user_board);
+   solved = solve(tmp_board); // 문제 풀어서
+   
+   if (solved != 0)
+   {
+      while(hint_try < MAX_HINT_TRY)
+      {
+         // 랜덤 좌표가 . 이면 그 자리 정답으로 채우고 반
+         i = rand() % 8 + 1;
+         j = rand() % 8 + 1;
+         
+         if ( user_board[i*9+j] == '.' && hint_try < MAX_HINT_TRY)
+         {
+            user_board[i*9+j] = tmp_board[i*9+j];
+            hint_try++;
+            return TRUE;
+         }
+      } 
+      if(hint_try >= MAX_HINT_TRY)
+      {
+         werase(status);
+        mvwprintw(status, 0, 0, "You can not get a hint anymore\n");
+      }
+   }
+   return FALSE;
+}
 
 int set_ticker( int n_msecs )
 {
