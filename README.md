@@ -26,6 +26,9 @@
 	| 조원 | 이주영 | UI 구성, 버그픽스     |
 	| 조원 | 김영우 | PPT, 동영상, 버그픽스  |
 
+* 실행법
+  cc main.c sudoku.c -lcurses -o sudoku
+
 * 데모 동영상 YOUTUBE 링크
 
   https://youtu.be/oHU0AokKuyU
