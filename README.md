@@ -27,6 +27,7 @@
 	| 조원 | 김영우 | PPT, 동영상, 버그픽스  |
 
 * 데모 동영상 YOUTUBE 링크
+
   https://youtu.be/oHU0AokKuyU
 
 - - -
