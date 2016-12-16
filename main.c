@@ -1,10 +1,10 @@
-#include <stdlib.h>    
-#include <stdio.h> 
-#include <unistd.h>      
-#include <ncurses.h>   
-#include <sys/time.h> 
-#include <time.h>      
-#include <string.h> 
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <ncurses.h>
+#include <sys/time.h>
+#include <time.h>
+#include <string.h>
 #include <signal.h>
 #include <termios.h>
 #include "sudoku.h"
@@ -42,9 +42,9 @@
 
 
 
-/* Àü¿ª */
+/* ì „ì—­ */
 static int g_playing = FALSE;
-static char* g_stream; /* ½ºÆ®¸²¼³Á¤ */
+static char* g_stream; /* ìŠ¤íŠ¸ë¦¼ì„¤ì • */
 static char plain_board[STREAM_LENGTH];
 static char user_board[STREAM_LENGTH];
 static DIFFICULTY g_level;
@@ -54,416 +54,505 @@ struct timespec delay;
 struct timespec prev;
 int paused=0;
 int hint_try = 0;
-/* ÇÔ¼ö */
+int num;
+/* í•¨ìˆ˜ */
 
 static int is_valid_stream(char *s)
 {
-   char *p = s;
-   short n = 0;
-   while ((*p) != '\0')
-   {
-      if (n++ > SUDOKU_LENGTH)
-         break;
-
-      //¹®ÀÚ°¡ 1¿¡¼­ 9 »çÀÌ ¶Ç´Â . ÀÎÁö °Ë»ç 
-      if(!((*p >= 49 && *p <= 57) || *p == '.' ))
-      {
-         printf("%d error.\n", n);
-         return FALSE;
-      }
-      p++; // ´ÙÀ½ ¹®ÀÚ
-   }
-
-   // streamÀÇ ±æÀÌ°¡ ½ºµµÄíÀÇ ±æÀÌ(81)¶û ÀÏÄ¡ ÇÏ´ÂÁö 
-   if (n != SUDOKU_LENGTH )
-   {
-      printf("stream is too short.\n");
-      return FALSE;
-   }
-
-   // ½ºµµÄí ÆÛÁñ °Ë»ç
-   if (!is_valid_puzzle(s))
-   {
-      printf("It is not available.\n");
-      return FALSE;
-   }
-   // À§ÀÇ ¿¡·¯¿¡ ¸ðµÎ ÇØ´çÇÏÁö ¾ÊÀ¸¸é, ÀÌ streamÀº valid ÇÔ
-   return TRUE;
+    char *p = s;
+    short n = 0;
+    while ((*p) != '\0')
+    {
+        if (n++ > SUDOKU_LENGTH)
+            break;
+        
+        //ë¬¸ìžê°€ 1ì—ì„œ 9 ì‚¬ì´ ë˜ëŠ” . ì¸ì§€ ê²€ì‚¬
+        if(!((*p >= 49 && *p <= 57) || *p == '.' ))
+        {
+            printf("%d error\n", n);
+            return FALSE;
+        }
+        p++; // ë‹¤ìŒ ë¬¸ìž
+    }
+    
+    // streamì˜ ê¸¸ì´ê°€ ìŠ¤ë„ì¿ ì˜ ê¸¸ì´(81)ëž‘ ì¼ì¹˜ í•˜ëŠ”ì§€
+    if (n != SUDOKU_LENGTH )
+    {
+        printf("Stream is too short\n");
+        return FALSE;
+    }
+    
+    // ìŠ¤ë„ì¿  í¼ì¦ ê²€ì‚¬
+    if (!is_valid_puzzle(s))
+    {
+        printf("it is not available\n");
+        return FALSE;
+    }
+    // ìœ„ì˜ ì—ëŸ¬ì— ëª¨ë‘ í•´ë‹¹í•˜ì§€ ì•Šìœ¼ë©´, ì´ streamì€ valid í•¨
+    return TRUE;
 }
-
-// Ä¿¼­ ÃÊ±âÈ­
+static void cleanup()
+{
+    endwin();
+}
+// ì»¤ì„œ ì´ˆê¸°í™”
 static void init_curses(void)
 {
     initscr();
     clear();
-    endwin();
+    atexit(cleanup);
     cbreak();
     noecho();
-
+    
     start_color();
     init_pair(1, COLOR_BLACK, COLOR_BLACK);
     init_pair(2, COLOR_GREEN, COLOR_BLACK);
-        
+    
     init_pair(3, COLOR_WHITE, COLOR_BLACK);
     init_pair(4, COLOR_MAGENTA, COLOR_BLACK);
 }
 
-// ½ºµµÄí È­¸é¿¡ ±×¸®±â
+// ìŠ¤ë„ì¿  í™”ë©´ì— ê·¸ë¦¬ê¸°
 static void _draw_grid()
 {
-   // ÀÌ ÇÔ¼ö¿¡¼­ grid´Â Àü¿ªº¯¼ö·Î ¼±¾ðµÈ WINDOW *Çü º¯¼ö
-
-   int i, j;
-
-   for(i = 0;i < 10;i++)
-   {
-         for(j = 0;j < 10;j++)
-         {        
+    // ì´ í•¨ìˆ˜ì—ì„œ gridëŠ” ì „ì—­ë³€ìˆ˜ë¡œ ì„ ì–¸ëœ WINDOW *í˜• ë³€ìˆ˜
+    
+    int i, j;
+    
+    for(i = 0;i < 10;i++)
+    {
+        for(j = 0;j < 10;j++)
+        {
             if(i % 3 == 0)
-               wattron(grid, A_BOLD|COLOR_PAIR(2));
+                wattron(grid, A_BOLD|COLOR_PAIR(2));
             if(j % 3 == 0)
-               wattron(grid, A_BOLD|COLOR_PAIR(2));
-
+                wattron(grid, A_BOLD|COLOR_PAIR(2));
+            
             wprintw(grid, "+");
             if((j % 3 == 0) && (i % 3 != 0))
             {
-                 wattron(grid, A_BOLD|COLOR_PAIR(1));
+                wattron(grid, A_BOLD|COLOR_PAIR(1));
             }
             if(j < 9)
-               wprintw(grid, "---");
+                wprintw(grid, "---");
             if(i % 3 == 0)
             {
-               wattron(grid, A_BOLD|COLOR_PAIR(1));
-            }
-        } 
-      
-        for(j = 0;j < 10 && i < 9;j++)
-         {
-           if(j % 3 == 0)
-               wattron(grid, A_BOLD|COLOR_PAIR(2));
-            if(j > 0)
-               wprintw(grid, "   |");
-            else
-               wprintw(grid, "|");
-            if(j % 3 == 0)
-            {
-               wattron(grid, A_BOLD|COLOR_PAIR(1));
+                wattron(grid, A_BOLD|COLOR_PAIR(1));
             }
         }
-   }
+        
+        for(j = 0;j < 10 && i < 9;j++)
+        {
+            if(j % 3 == 0)
+                wattron(grid, A_BOLD|COLOR_PAIR(2));
+            if(j > 0)
+                wprintw(grid, "   |");
+            else
+                wprintw(grid, "|");
+            if(j % 3 == 0)
+            {
+                wattron(grid, A_BOLD|COLOR_PAIR(1));
+            }
+        }
+    }
 }
 
 void showWindow()
 {
     infobox = newwin(INFO_LINES, INFO_COLS, INFO_Y, INFO_X);
     wbkgd(infobox, COLOR_PAIR(2));
-
-   
+    
+    
     wattron(infobox, A_BOLD|COLOR_PAIR(4));
-
-   wprintw(infobox, "how to play?\n");
- 
+    
+    wprintw(infobox, "how to play?\n");
+    
     wattroff(infobox, A_BOLD|COLOR_PAIR(2));
     wattron(infobox, COLOR_PAIR(3));
-   
-
-   
-   wprintw(infobox, " S - Start play\n");
+    
+    
+    
+    wprintw(infobox, " S - Start play\n");
     wprintw(infobox, " N - New puzzle\n");
     wprintw(infobox, " x - Delete number\n");
-   if(MAX_HINT_TRY>hint_try)
-      wprintw(infobox, " H - Give a hint(max x%d)\n",MAX_HINT_TRY-hint_try);
-   else if(MAX_HINT_TRY<=hint_try)
-      wprintw(infobox, " H - No hint!!!!!\n");
+    if(MAX_HINT_TRY>hint_try)
+        wprintw(infobox, " H - Give a hint(max x%d)\n",MAX_HINT_TRY-hint_try);
+    else if(MAX_HINT_TRY<=hint_try)
+        wprintw(infobox, " H - No hint!!!!!\n");
     wprintw(infobox, " A - Giva a answer\n");
     wprintw(infobox, " C - Check ur answer\n");
     wprintw(infobox, " Q - Quit\n\n\n");
-   
+    
     mvwprintw(infobox,11,0, "level: %s\n", difficulty_to_str(g_level));
     wattroff(infobox, COLOR_PAIR(1));
 }
 
-// window ÃÊ±âÈ­
+// window ì´ˆê¸°í™”
 static void init_windows(void)
 {
+    
     keypad(stdscr, true);
     status = newwin(STATUS_LINES, STATUS_COLS, STATUS_Y, STATUS_X);
-
-    // ½ºµµÄí ±×¸®µå Ã¢
+    
+    // ìŠ¤ë„ì¿  ê·¸ë¦¬ë“œ ì°½
     grid = newwin(GRID_LINES, GRID_COLS, GRID_Y, GRID_X);
-    _draw_grid(); // grid ±×¸®±â
-
-    //timer Ã¢
+    _draw_grid(); // grid ê·¸ë¦¬ê¸°
+    
+    //timer ì°½
     levelbox = newwin(LEVEL_LINES, LEVEL_COLS, LEVEL_X, LEVEL_Y);
-   showWindow();
-
+    showWindow();
+    
 }
-
-
-// ÀÎÀÚ·Î 81ÀÚ¸® ¹®ÀÚ¿­ ¹Þ¾Æ¼­ ±×¸®µå ³»ºÎ Ã¤¿ì±â 
+// ì¸ìžë¡œ 81ìžë¦¬ ë¬¸ìžì—´ ë°›ì•„ì„œ ê·¸ë¦¬ë“œ ë‚´ë¶€ ì±„ìš°ê¸°
 static void fill_grid(char *board)
 {
-   int row, col, x, y;
-   int n;
-   int c;
-
-   wstandend(grid);
-   y = GRID_NUMBER_START_Y;
-   for(row=0; row < 9; row++)
-   {
-      x = GRID_NUMBER_START_X;
-      for(col=0; col < 9; col++)
-      {
-         n = board[row*9+col];
-         if(n == '.') // .Àº ºóÄ­À¸·Î Ã³¸® 
-            c = ' ';
-         else
-            c = n; 
-         mvwprintw(grid, y, x, "%c", c);
-         x += GRID_LINE_DELTA;
-      }
-      y += GRID_COL_DELTA;
-   }
+    int row, col, x, y;
+    int n;
+    int c;
+    
+    wstandend(grid);
+    y = GRID_NUMBER_START_Y;
+    for(row=0; row < 9; row++)
+    {
+        x = GRID_NUMBER_START_X;
+        for(col=0; col < 9; col++)
+        {
+            n = board[row*9+col];
+            if(n == '.') // .ì€ ë¹ˆì¹¸ìœ¼ë¡œ ì²˜ë¦¬
+                c = ' ';
+            else
+                c = n;
+            mvwprintw(grid, y, x, "%c", c);
+            x += GRID_LINE_DELTA;
+        }
+        y += GRID_COL_DELTA;
+    }
 }
 
-// »õ ÆÛÁñ »ý¼º 
+// ìƒˆ í¼ì¦ ìƒì„±
 static void new_puzzle(void)
 {
-   int holes = get_holes(g_level); // ³­ÀÌµµ¿¡ µû¸¥ ºóÄ­ ¼ö ¼³Á¤ 
-   char* stream;
-
-   if (g_stream) // ¸¸ÀÏ ÇöÀç ¼³Á¤µÈ ½ºÆ®¸²ÀÌ ÀÖÀ¸¸é, ÇØ´ç ½ºÆ®¸² »ç¿ë
-      stream = g_stream;
-   else // ±×·¸Áö ¾ÊÀ¸¸é ·£´ýÀ¸·Î »õ ÆÛÁñ »ý¼º
-      stream = generate_puzzle(holes);
-
-   //todo
-   strcpy(plain_board, stream);
-   strcpy(user_board, stream);
-
-   if (!g_stream)
-      free(stream);
-
-   // »ý¼ºÇÑ ½ºÆ®¸²À¸·Î ±×¸®µå Ã¤¿ì±â
-   fill_grid(plain_board);
-
-   g_playing = TRUE;
+    int holes = get_holes(g_level); // ë‚œì´ë„ì— ë”°ë¥¸ ë¹ˆì¹¸ ìˆ˜ ì„¤ì •
+    char* stream;
+    
+    if (g_stream) // ë§Œì¼ í˜„ìž¬ ì„¤ì •ëœ ìŠ¤íŠ¸ë¦¼ì´ ìžˆìœ¼ë©´, í•´ë‹¹ ìŠ¤íŠ¸ë¦¼ ì‚¬ìš©
+        stream = g_stream;
+    else // ê·¸ë ‡ì§€ ì•Šìœ¼ë©´ ëžœë¤ìœ¼ë¡œ ìƒˆ í¼ì¦ ìƒì„±
+        stream = generate_puzzle(holes);
+    
+    //todo
+    strcpy(plain_board, stream);
+    strcpy(user_board, stream);
+    
+    if (!g_stream)
+        free(stream);
+    
+    // ìƒì„±í•œ ìŠ¤íŠ¸ë¦¼ìœ¼ë¡œ ê·¸ë¦¬ë“œ ì±„ìš°ê¸°
+    fill_grid(plain_board);
+    
+    g_playing = TRUE;
 }
 
+// ížŒíŠ¸ í•¨ìˆ˜
+
+
+static int hint()
+{
+    char tmp_board[STREAM_LENGTH];
+    int i, j, solved;
+    
+    strcpy(tmp_board, user_board);
+    solved = solve(tmp_board); // ë¬¸ì œ í’€ì–´ì„œ
+    
+    if (solved != 0)
+    {
+        while(hint_try < MAX_HINT_TRY)
+        {
+            // ëžœë¤ ì¢Œí‘œê°€ . ì´ë©´ ê·¸ ìžë¦¬ ì •ë‹µìœ¼ë¡œ ì±„ìš°ê³  ë°˜
+            i = rand() % 8 + 1;
+            j = rand() % 8 + 1;
+            
+            if ( user_board[i*9+j] == '.' && hint_try < MAX_HINT_TRY)
+            {
+                user_board[i*9+j] = tmp_board[i*9+j];
+                hint_try++;
+                return TRUE;
+            }
+        }
+        if(hint_try >= MAX_HINT_TRY)
+        {
+            werase(status);
+            mvwprintw(status, 0, 0, "You can not get a hint anymore\n");
+        }
+    }
+    return FALSE;
+}
 
 int set_ticker( int n_msecs )
 {
-        struct itimerval new_timeset;
-        long    n_sec, n_usecs;
-
-        n_sec = n_msecs / 1000 ;      /* int part   */
-        n_usecs = ( n_msecs % 1000 ) * 1000L ;   /* remainder   */
-
-        new_timeset.it_interval.tv_sec  = n_sec;        /* set reload       */
-        new_timeset.it_interval.tv_usec = n_usecs;      /* new ticker value */
-        new_timeset.it_value.tv_sec     = n_sec  ;      /* store this       */
-        new_timeset.it_value.tv_usec    = n_usecs ;     /* and this         */
-
-   return setitimer(ITIMER_REAL, &new_timeset, NULL);
+    struct itimerval new_timeset;
+    long    n_sec, n_usecs;
+    
+    n_sec = n_msecs / 1000 ;      /* int part   */
+    n_usecs = ( n_msecs % 1000 ) * 1000L ;   /* remainder   */
+    
+    new_timeset.it_interval.tv_sec  = n_sec;        /* set reload       */
+    new_timeset.it_interval.tv_usec = n_usecs;      /* new ticker value */
+    new_timeset.it_value.tv_sec     = n_sec  ;      /* store this       */
+    new_timeset.it_value.tv_usec    = n_usecs ;     /* and this         */
+    
+    return setitimer(ITIMER_REAL, &new_timeset, NULL);
 }
 
 
-int num = 30;
 void _countdown(int signum)
 {
-   int y, x;
+    int y, x;
     getyx(grid, y, x);
-   mvprintw(25,1, "%d", num--);
-   //wmove(grid, y, x);
-   move(y+3,x+3);
-   refresh();
-   if ( num < 0 ){
-      mvprintw(25,1,"DONE!\n");
-   }
+    mvprintw(25,1, "time : %3d sec", num--);
+    //wmove(grid, y, x);
+    move(y+3,x+3);
+    refresh();
+    if ( num < -1 ){
+        mvprintw(25,1,"Time Over!\n");
+        refresh();
+        werase(status);
+        mvwprintw(status,0,0,"game over");
+        wrefresh(status);
+        if ( set_ticker(0) == -1 )
+            perror("set_ticker");
+        g_playing = false;
+    }
 }
 int main(int argc, char *argv[])
 {
-   int run = TRUE;
-   int key, x, y, posx, posy;
-   void _countdown(int);
-
-   g_stream = NULL;
-
-   signal(SIGALRM, _countdown);
-   
-   if ( set_ticker(1000) == -1 )
-      perror("set_ticker");
-
-   // curse¿Í window ÃÊ±âÈ­ 
-   init_curses();
-   init_windows();
-
-   srand(time(NULL)); // ·£´ýÇÔ¼ö ½Ãµå ¼³Á¤ 
-
-   strcpy(plain_board, INTRO);
-   strcpy(user_board, INTRO);
-   fill_grid(plain_board);
-   
-   refresh();
-   wrefresh(grid);
-   wrefresh(infobox);
-   wrefresh(levelbox);
-
-   y = GRID_NUMBER_START_Y;
-   x = GRID_NUMBER_START_X;
-   wmove(grid, y, x);
-
-   while(run)
-   {
-
-      mvprintw(0, 0, "welcome to sudoku world");
-      refresh();
-      wrefresh(grid);
-      key = getch(); // ÀÔ·ÂÇÑ Å°¿¡ µû¸¥ µ¿ÀÛ ¼öÇà 
-      werase(status);
-
-      switch(key)
-      {
-         case KEY_LEFT:
-            if(x>5)
-               x -= GRID_LINE_DELTA;
-            break;
-         case KEY_RIGHT:
-            if(x<34)
-               x += GRID_LINE_DELTA;
-            break;  
-         case KEY_UP:
-            if(y>2)
-               y -= GRID_COL_DELTA;
-            break;
-         case KEY_DOWN:
-            if(y<17)
-               y += GRID_COL_DELTA;
-            break;
-          //¹æÇâ 
-         case 'Q':
-         case 27: 
-            run = FALSE;
-            break;
-
-          case 'S':
-         case 'N': // »õ ÆÛÁñ »ý¼º
-         /* showWindow();*/
-          hint_try= 0;
-          
-           if (!g_stream)
-              mvwprintw(infobox,11,0, "level: %s\n", difficulty_to_str(g_level));
-         showWindow();
-            werase(status);
-            mvwprintw(status, 0, 0, "Generating puzzle...");
-         
-            refresh();
-            wrefresh(status);
-            new_puzzle();
-         
-            num = 30;
-            werase(status);
-            g_playing = TRUE;
-
-            if (g_stream)
+    int run = TRUE;
+    int key, x, y, posx, posy;
+    void _countdown(int);
+    
+    g_stream = NULL;
+    
+    signal(SIGALRM, _countdown);
+    
+    // curseì™€ window ì´ˆê¸°í™”
+    init_curses();
+    init_windows();
+    
+    srand(time(NULL)); // ëžœë¤í•¨ìˆ˜ ì‹œë“œ ì„¤ì •
+    
+    strcpy(plain_board, INTRO);
+    strcpy(user_board, INTRO);
+    fill_grid(plain_board);
+    
+    refresh();
+    wrefresh(grid);
+    wrefresh(infobox);
+    wrefresh(levelbox);
+    
+    y = GRID_NUMBER_START_Y;
+    x = GRID_NUMBER_START_X;
+    wmove(grid, y, x);
+    
+    while(run)
+    {
+        
+        mvprintw(0, 0, "welcome to sudoku world");
+        refresh();
+        wrefresh(grid);
+        key = getch(); // ìž…ë ¥í•œ í‚¤ì— ë”°ë¥¸ ë™ìž‘ ìˆ˜í–‰
+        werase(status);
+        
+        switch(key)
+        {
+            case KEY_LEFT:
+                if(x>5)
+                    x -= GRID_LINE_DELTA;
+                break;
+            case KEY_RIGHT:
+                if(x<34)
+                    x += GRID_LINE_DELTA;
+                break;
+            case KEY_UP:
+                if(y>2)
+                    y -= GRID_COL_DELTA;
+                break;
+            case KEY_DOWN:
+                if(y<17)
+                    y += GRID_COL_DELTA;
+                break;
+                //ë°©í–¥
+            case 'Q':
+            case 27:
+                run = FALSE;
+                break;
+                
+            case 'A': // ë¬¸ì œ í’€ê¸°
+                if(g_playing)
+                {
+                    werase(status);
+                    mvwprintw(status, 0, 0, "Solving puzzle...");
+                    set_ticker(0);
+                    mvprintw(25,1,"FAIL!\n");
+                    refresh();
+                    wrefresh(status);
+                    solve(plain_board);
+                    fill_grid(plain_board);
+                    werase(status);
+                    mvwprintw(status, 0, 0, "You gave up...sorry about that :(");
+                    g_playing = FALSE;
+                }
+                break;
+                
+                
+            case 'P': // ì¹˜íŠ¸í‚¤
+                if(g_playing)
+                {
+                    werase(status);
+                    mvwprintw(status, 0, 0, "Solving puzzle...");
+                    refresh();
+                    wrefresh(status);
+                    solve(plain_board);
+                    fill_grid(plain_board);
+                    werase(status);
+                    strcpy(user_board,plain_board);
+                }
+                break;
+            case 'S':
+            case 'N': // ìƒˆ í¼ì¦ ìƒì„±
+                /* showWindow();*/
+                hint_try= 0;
+                showWindow();
+                
+                if (!g_stream)
+                    mvwprintw(infobox,11,0, "level: %s\n", difficulty_to_str(g_level));
+                werase(status);
+                mvwprintw(status, 0, 0, "Generating puzzle...");
+                refresh();
+                wrefresh(status);
+                new_puzzle();
+                num =180;
+                if ( set_ticker(1000) == -1 )
+                    werase(status);
+                g_playing = TRUE;
+                
+                if (g_stream)
+                {
+                    free(g_stream);
+                    g_stream = NULL;
+                }
+                
+                
+                break;
+                
+            case 'C':
+            case 'c':
+                if(g_playing)
+                {
+                    int solvable;
+                    char tmp_board[STREAM_LENGTH];
+                    
+                    werase(status);
+                    
+                    strcpy(tmp_board, user_board);
+                    solvable= solve(tmp_board);
+                    
+                    set_ticker(0);
+                    
+                    if(solvable == 0)
+                    {
+                        mvwprintw(status, 0, 0, "Not correct");
+                        mvprintw(25,1,"              ");
+                        refresh();
+                    }
+                    else
+                    {
+                        if (strchr(user_board, '.') == NULL)
+                        {
+                            //mvwprintw(status, 0, 0, "Solved!");
+                            mvprintw(25,1,"Sucess!          ");
+                            refresh();
+                            if(g_level == D_EASY)
+                            {
+                                mvwprintw(status, 0, 0, "NEXT LEVEL");
+                                g_level = D_NORMAL;
+                            }
+                            else if(g_level == D_NORMAL)
+                            {
+                                mvwprintw(status, 0, 0, "NEXT LEVEL");
+                                g_level = D_HARD;
+                            }
+                            else if(g_level == D_HARD)
+                                mvwprintw(status, 0, 0, "You cleared final stage!");
+                            
+                            
+                            g_playing = FALSE;
+                        }
+                        else
+                        {
+                            mvwprintw(status, 0, 0, "You didn't even fill it up yet");
+                        }
+                    }
+                }
+                break;
+                // delete
+            case KEY_DC:
+            case KEY_BACKSPACE:
+            case 127:
+            case 'x':
+                if(g_playing)
+                {
+                    posy = (y-GRID_NUMBER_START_Y)/GRID_COL_DELTA;
+                    posx = (x-GRID_NUMBER_START_X)/GRID_LINE_DELTA;
+                    // if on empty position
+                    if(plain_board[posy*9+posx] == '.')
+                    {
+                        user_board[posy*9+posx] = '.';
+                        wprintw(grid, " ");
+                    }
+                    break;
+                }
+                
+            case 'H':
+                if (g_playing && hint())
+                {
+                    fill_grid(user_board);
+                    werase(status);
+                    mvwprintw(status, 0, 0, "One blank was filled!");
+                }
+                showWindow();
+                break;
+            default:
+                break;
+        }
+        /*if user inputs a number*/
+        // ìˆ«ìž í™”ë©´ì— ì±„ìš°ê¸°
+        
+        if(key >= 49 && key <= 57 && g_playing)
+        {
+            posy = (y-GRID_NUMBER_START_Y)/GRID_COL_DELTA;
+            posx = (x-GRID_NUMBER_START_X)/GRID_LINE_DELTA;
+            // if on empty position
+            if(plain_board[posy*9+posx] == '.')
             {
-               free(g_stream);
-               g_stream = NULL;
+                // add inputted number to grid
+                wattron(grid, COLOR_PAIR(4));
+                wprintw(grid, "%c", key);
+                wattroff(grid, COLOR_PAIR(4));
+                user_board[posy*9+posx] = key;
             }
-            
-         
-            break;
-
-         case 'C':   
-         case 'c':
-            if(g_playing)
-            {
-               int solvable;
-               char tmp_board[STREAM_LENGTH];
-
-               werase(status);
-
-               strcpy(tmp_board, user_board);
-               solvable= solve(tmp_board);
-
-               if(solvable == 0)
-               {
-                  mvwprintw(status, 0, 0, "Not correct");
-               }
-               else
-               {
-                  if (strchr(user_board, '.') == NULL)
-                  {
-                     mvwprintw(status, 0, 0, "Solved!");
-                     if(g_level == D_EASY)
-                     {
-                        mvwprintw(status, 0, 0, "NEXT LEVEL");
-                        g_level = D_NORMAL;
-                     }
-                     else if(g_level == D_NORMAL)
-                     {
-                        mvwprintw(status, 0, 0, "NEXT LEVEL");
-                        g_level = D_HARD;
-                     }
-                     else if(g_level == D_HARD)
-                        mvwprintw(status, 0, 0, "You cleared final stage!");
-                     
-
-                     g_playing = FALSE;
-                  }
-                  else
-                  {
-                     mvwprintw(status, 0, 0, "You didn't even fill it up yet");
-                  }
-               }
-            }
-            break;
-         // delete
-         case KEY_DC:
-         case KEY_BACKSPACE:
-         case 127:
-         case 'x':
-            if(g_playing)
-            {
-               posy = (y-GRID_NUMBER_START_Y)/GRID_COL_DELTA;
-               posx = (x-GRID_NUMBER_START_X)/GRID_LINE_DELTA;
-               // if on empty position
-               if(plain_board[posy*9+posx] == '.')
-               {
-                  user_board[posy*9+posx] = '.';
-                  wprintw(grid, " ");
-               }
-               break;
-            }
-      /*if user inputs a number*/
-      // ¼ýÀÚ È­¸é¿¡ Ã¤¿ì±â
-     
-      if(key >= 49 && key <= 57 && g_playing)
-      {
-         posy = (y-GRID_NUMBER_START_Y)/GRID_COL_DELTA;
-         posx = (x-GRID_NUMBER_START_X)/GRID_LINE_DELTA;
-         // if on empty position
-         if(plain_board[posy*9+posx] == '.')
-         {
-            // add inputted number to grid
-            wattron(grid, COLOR_PAIR(4));
-            wprintw(grid, "%c", key);
-            wattroff(grid, COLOR_PAIR(4));
-            user_board[posy*9+posx] = key;
-         }
-      }
-
-     
-     wmove(grid, y,x);
-      refresh();
-      
-      wrefresh(status);
-      wrefresh(grid);
-      wrefresh(infobox);
-   }
-   if (g_stream)
-      free(g_stream);
-
-   endwin();
-   return EXIT_SUCCESS;
+        }
+        
+        
+        wmove(grid, y,x);
+        refresh();
+        
+        wrefresh(status);
+        wrefresh(grid);
+        wrefresh(infobox);
+    }
+    if (g_stream)
+        free(g_stream);
+    
+    endwin();
+    return EXIT_SUCCESS;
 }
