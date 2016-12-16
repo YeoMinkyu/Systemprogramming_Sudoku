@@ -1,4 +1,4 @@
-#SystemProgramming-20162-Class_Team1
+#SystemProgramming-20162-Class_C_Team1
 
 ### Team
 * 경북대학교 IT대학 컴퓨터학부 소프트웨어설계 1팀
@@ -16,7 +16,7 @@
 
 ## 팀 정보
 
-* 팀명 - __1조__  
+* 팀명 - C반__1조__  
 
 * 팀 조직  
 
